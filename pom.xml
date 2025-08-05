@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.library</groupId>
-    <artifactId>UserFirstProj</artifactId>
+    <artifactId>SHASTRA</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>sdl</name>
     <description>SDL project for Spring Boot</description>
