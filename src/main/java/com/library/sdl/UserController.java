@@ -57,11 +57,11 @@ public class UserController {
             String filePath = fileStorageService.saveFile(adharCard);
             user.setAdharCard(filePath);
             user.setRegistrationDate(LocalDateTime.now());
-            emailSenderService.sendEmail(
-                    user.getEmail(),
-                    "Welcome to SDL",
-                    "Dear " + user.getName() + ",\n\nThanks for registering at Shastra Digital Library."
-            );
+//            emailSenderService.sendEmail(
+//                    user.getEmail(),
+//                    "Welcome to SDL",
+//                    "Dear " + user.getName() + ",\n\nThanks for registering at Shastra Digital Library."
+//            );
             if (user.getShift() == null || user.getShift().isEmpty()) {
                 logger.warn("User creation failed: Shift is empty");
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);

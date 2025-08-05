@@ -19,7 +19,7 @@ public class FileStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
-    @Value("${file.upload-dir}")  // Defined in application.properties
+    @Value("${file.upload-dir}")  // Define this in application.properties
     private String uploadDir;
 
     public String saveFile(MultipartFile file) throws IOException {
@@ -32,17 +32,16 @@ public class FileStorageService {
             dir.mkdirs();
         }
 
-        // Extract file details
+        // Extract extension
         String originalFileName = file.getOriginalFilename();
         String extension = getFileExtension(originalFileName).toLowerCase();
         logger.info("File extension detected: {}", extension);
 
-        // Generate unique file name
+        // Generate unique name
         String newFileName = System.currentTimeMillis() + "." + extension;
         Path targetLocation = Paths.get(uploadDir, newFileName);
         logger.info("Generated unique filename: {}", newFileName);
 
-        // Handle different file types
         if (extension.equals("svg") || extension.equals("pdf")) {
             logger.info("Saving {} file without compression", extension);
             Files.copy(file.getInputStream(), targetLocation);
@@ -59,11 +58,15 @@ public class FileStorageService {
     }
 
     private void compressImage(MultipartFile file, File outputFile, String format) throws IOException {
-        // Read image file
-        BufferedImage image = ImageIO.read(file.getInputStream());
+        // Load and validate image
+        BufferedImage image;
+        try (InputStream is = file.getInputStream()) {
+            image = ImageIO.read(is);
+        }
+
         if (image == null) {
-            logger.error("Invalid image format: {}", file.getOriginalFilename());
-            throw new IOException("Unsupported image format: " + file.getOriginalFilename());
+            logger.error("Invalid image: {}", file.getOriginalFilename());
+            throw new IOException("Unsupported image format or corrupted file: " + file.getOriginalFilename());
         }
 
         double quality = 0.9;
@@ -71,17 +74,17 @@ public class FileStorageService {
 
         logger.info("Starting image compression: {}", file.getOriginalFilename());
 
-        // Compress until file size ≤ 200 KB
+        // Loop compression until ≤ 200 KB or quality too low
         while (fileSize > 200 * 1024 && quality > 0.1) {
             try (FileOutputStream fos = new FileOutputStream(outputFile)) {
                 Thumbnails.of(image)
-                        .size(800, 800)  // Resize for better compression
+                        .size(800, 800)
                         .outputFormat(format)
                         .outputQuality(quality)
                         .toOutputStream(fos);
             }
             fileSize = outputFile.length();
-            logger.info("Compressed file size: {} KB, Quality: {}", fileSize / 1024, quality);
+            logger.info("Compressed size: {} KB, Quality: {}", fileSize / 1024, quality);
             quality -= 0.2;
         }
 
@@ -94,6 +97,7 @@ public class FileStorageService {
     }
 
     private boolean isImageFormat(String format) {
-        return format.equals("jpg") || format.equals("jpeg") || format.equals("png") || format.equals("bmp") || format.equals("gif");
+        return format.equals("jpg") || format.equals("jpeg") || format.equals("png")
+                || format.equals("bmp") || format.equals("gif");
     }
 }

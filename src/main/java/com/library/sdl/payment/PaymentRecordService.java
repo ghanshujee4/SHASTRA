@@ -43,7 +43,7 @@ public class PaymentRecordService {
 
     public void markAsPaid(Long paymentId, Double amount, String comments) {
         PaymentRecord payment = paymentRecordRepository.findById(paymentId).orElseThrow();
-        payment.setDueDate(LocalDate.from(payment.getMonthPaid()));
+        // payment.setDueDate(LocalDate.from(payment.getDueDate()));
         // Mark current payment as paid
         payment.setPaid(true);
         payment.setAmount(amount);

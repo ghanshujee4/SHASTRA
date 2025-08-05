@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.library</groupId>
-    <artifactId>sdl</artifactId>
+    <artifactId>UserFirstProj</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>sdl</name>
     <description>SDL project for Spring Boot</description>
@@ -60,6 +60,17 @@
             <artifactId>jakarta.mail</artifactId>
             <version>2.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-core</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-jpeg</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+
 
         <!-- Jakarta Mail -->
         <!--		<dependency>-->
@@ -142,6 +153,10 @@
             <groupId>org.glassfish.expressly</groupId>
             <artifactId>expressly</artifactId>
             <version>5.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
     </dependencies>
     <dependencyManagement>

@@ -6,28 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-//    Optional<User> findByEmailAndPassword(String email,String password);
-//    @Query("SELECT s.seat FROM User s WHERE s.isRegistered='Y' and" +
-//            " s.shift =:shift" )
-//    List<String> findRegisteredSeatsByShift(@Param("shift") String shift);
 
     Optional<User> findByEmailAndPassword(String email, String password);
-//    @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' AND (" +
-//            "s.shift LIKE CONCAT(:shift, '%') OR " +
-//            "s.shift LIKE CONCAT('%,', :shift) OR " +
-//            "s.shift LIKE CONCAT('%,', :shift, ',%') OR " +
-//            "s.shift = :shift)")
-//    List<String> findRegisteredSeatsByShift(@Param("shift") String shift);
-
-//    @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
-//            "AND (s.shift = :shift OR " +
-//            "s.shift LIKE CONCAT(:shift, ',%') OR " +
-//            "s.shift LIKE CONCAT('%,', :shift, ',%') OR " +
-//            "s.shift LIKE CONCAT('%,', :shift))")
-//    List<String> findRegisteredSeatsByShift(@Param("shift") String shift);
-//@Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
-//        "AND (FIND_IN_SET(:shift, s.shift) > 0)")
-//List<String> findRegisteredSeatsByShift(@Param("shift") String shift);
 
 
     @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
@@ -36,23 +16,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "OR s.shift LIKE CONCAT('%,', :shift) " +
             "OR s.shift = :shift)")
     List<String> findRegisteredSeatsByShift(@Param("shift") String shift);
-
-
-
-//    @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
-//            "AND NOT (s.shift LIKE CONCAT(:shift, '%') " +
-//            "OR s.shift LIKE CONCAT('%,', :shift) " +
-//            "OR s.shift LIKE CONCAT('%,', :shift, ',%') " +
-//            "OR s.shift = :shift)")
-//    List<String> findAvailableSeatsForShift(@Param("shift") String shift);
-
-    // Repository Query Update
-//    @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
-//            "AND NOT (s.shift LIKE CONCAT(:shift, '%') " +
-//            "OR s.shift LIKE CONCAT('%,', :shift) " +
-//            "OR s.shift LIKE CONCAT('%,', :shift, ',%') " +
-//            "OR s.shift = :shift)")
-//    List<String> findAvailableSeatsForShift(@Param("shift") String shift);
 
 
 

@@ -32,10 +32,6 @@ public class PaymentRecord {
         this.comments = comments;
     }
 
-
-
-
-
     public LocalDate getMonthPaid() {
         return monthPaid;
     }

@@ -117,20 +117,17 @@ public class SeatFullInfoDTO {
     }
 
     // Constructor
-    public SeatFullInfoDTO(int seatNo, Long userId, String userName, String email, Long mobile, String shift, String address,
-                           Boolean isPaid, LocalDate dueDate, LocalDate paymentDate, Double amount, String comments) {
+    public SeatFullInfoDTO(int seatNo, Long userId, String userName, Long mobile, String shift,
+                           Boolean isPaid, LocalDate dueDate) {
         this.seatNo = seatNo;
         this.userId = userId;
         this.userName = userName;
-        this.email = email;
+
         this.mobile = mobile;
         this.shift = shift;
-        this.address = address;
         this.isPaid = isPaid;
         this.dueDate = dueDate;
-        this.paymentDate = paymentDate;
-        this.amount = amount;
-        this.comments = comments;
+
     }
 
     // Getters and Setters (or use Lombok @Data)
