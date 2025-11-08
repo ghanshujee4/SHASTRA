@@ -59,7 +59,7 @@ public class User{
     @Column(name = "password")
     private String password;
 
-    @Column(name = "isRegistered")
+    @Column(name = "is_registered")
     private String isRegistered;
 
     @Column(name = "adharCard")
@@ -72,6 +72,16 @@ public class User{
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate admissionDate;
 
+    @Column(name = "extraHour")
+    private String extraHour;
+
+    public String getExtraHour() {
+        return extraHour;
+    }
+
+    public void setExtraHour(String extraHour) {
+        this.extraHour = extraHour;
+    }
 
     public LocalDate getAdmissionDate() {
         return admissionDate;
@@ -95,14 +105,6 @@ public class User{
 
     public void setAdharCard(String adharCard) {
         this.adharCard = adharCard;
-    }
-
-    public String getIsRegistered() {
-        return isRegistered;
-    }
-
-    public void setIsRegistered(String isRegistered) {
-        this.isRegistered = isRegistered;
     }
 
     public String getShift() {
@@ -129,7 +131,13 @@ public class User{
         this.age = age;
     }
 
+    public String getIsRegistered() {
+        return isRegistered;
+    }
 
+    public void setIsRegistered(String isRegistered) {
+        this.isRegistered = isRegistered;
+    }
 
     public String getAddress() {
         return address;

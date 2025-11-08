@@ -1,7 +1,7 @@
 package com.library.sdl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.library.sdl.payment.EmailService;
+import com.library.sdl.email.EmailService;
 import com.library.sdl.payment.PaymentRecordService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,17 +57,19 @@ public class UserController {
             String filePath = fileStorageService.saveFile(adharCard);
             user.setAdharCard(filePath);
             user.setRegistrationDate(LocalDateTime.now());
-//            emailSenderService.sendEmail(
-//                    user.getEmail(),
-//                    "Welcome to SDL",
-//                    "Dear " + user.getName() + ",\n\nThanks for registering at Shastra Digital Library."
-//            );
+
             if (user.getShift() == null || user.getShift().isEmpty()) {
                 logger.warn("User creation failed: Shift is empty");
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
             User savedUser = userService.createUser(user);
-            paymentRecordService.createMonthlyPayment(savedUser.getId(), 0.0,"");
+            paymentRecordService.createMonthlyPayment(savedUser.getId(), "Initial registration payment");
+            // ✅ Send welcome email
+            emailSenderService.sendEmailToUser(
+                    savedUser.getEmail(),
+                    "Welcome to SDL 🎉",
+                    "Dear " + savedUser.getName() + ",\n\nThank you for registering at Shastra Digital Library!"+" https://shastradigitallibrary.com/" + "\n\nPlease complete the payment within the next 24 hours to avoid temporary deactivation of your account." + "\n\nThanks," + "\n\nYour Enrollment ID is :" + savedUser.getId() + ",\n\nSDL"
+            );
             logger.info("User created successfully with ID: {}", savedUser.getId());
             return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
         } catch (Exception e) {
@@ -136,7 +138,6 @@ public class UserController {
         try {
             logger.info("Admin login attempt: {}", user.getEmail());
             User admin = userService.loginAdmin(user.getEmail(), user.getPassword());
-
             LoginResponse loginResponse = new LoginResponse();
             loginResponse.setMessage("Admin Login Successful");
             loginResponse.setToken("ADMIN-TOKEN-" + admin.getId());
@@ -168,7 +169,6 @@ public class UserController {
             logger.warn("User not found with ID: {}", id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
         User updatedUserData = userService.updateUser(existingUser, updatedUser);
         logger.info("User updated successfully with ID: {}", id);
         return new ResponseEntity<>(updatedUserData, HttpStatus.OK);

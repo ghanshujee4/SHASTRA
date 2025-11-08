@@ -17,26 +17,25 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    // private CustomUserDetailsService userDetailsService;
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for APIs (use with caution)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**","/uploads/**", "/static/uploads/**").permitAll() // Open /api/seats endpoint
-                        .anyRequest().authenticated() // Secure other endpoints
+                        .requestMatchers("/api/**","/uploads/**", "/static/uploads/**").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .securityMatcher("/login", "/logout") // 👈 Use securityMatcher
-                .formLogin(Customizer.withDefaults()); // ✅ New way to enable form login
+                .securityMatcher("/login", "/logout")
+                .formLogin(Customizer.withDefaults());
         return http.build();
     }
-
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("https://manage.shastradigitallibrary.com"));
+        // List all allowed origins: adjust as needed
+        config.setAllowedOrigins(List.of("http://localhost:3000", "https://manage.shastradigitallibrary.com"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -46,10 +45,8 @@ public class SecurityConfig {
         return source;
     }
 
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }
-

@@ -44,9 +44,12 @@ public class SeatService {
 
         Set<String> registeredSeats = shifts.stream()
                 .flatMap(shift -> {
+                    // Assuming findRegisteredSeatsByShift returns List<String> of "seatNumber,name"
                     List<String> foundSeats = userRepository.findRegisteredSeatsByShift(shift);
-                    logger.debug("Shift: {}, Registered Seats: {}", shift, foundSeats);
-                    return foundSeats.stream().map(String::valueOf);
+                    logger.debug("Shift: {}, Registered Seats (raw): {}", shift, foundSeats);
+
+                    return foundSeats.stream()
+                            .map(seatStr -> seatStr.split(",")[0].trim()); // take only seat number
                 })
                 .collect(Collectors.toSet());
 
@@ -66,59 +69,6 @@ public class SeatService {
         return paymentRecordRepository.findByUserId(userId);
     }
 
-//    public List<SeatFullInfoDTO> getAllSeatsWithFullInfo() {
-//        logger.info("Fetching full seat info (with users and payments)");
-//
-//        List<Seat> allSeats = seatRepository.findAll();
-//        List<User> allUsers = userRepository.findAll().stream()
-//                .filter(user -> "Y".equalsIgnoreCase(user.getIsRegistered())) // ✅ Only active users
-//                .toList();
-//        List<PaymentRecord> allPayments = paymentRecordRepository.findAll();
-//
-//        Map<String, List<User>> seatToUserMap = allUsers.stream()
-//                .filter(user -> user.getSeat() != null)
-//                .collect(Collectors.groupingBy(User::getSeat));
-//
-//        Map<Long, PaymentRecord> userToLatestPaymentMap = allPayments.stream()
-//                .filter(p -> p.getUser() != null)
-//                .collect(Collectors.groupingBy(
-//                        p -> p.getUser().getId(),
-//                        Collectors.collectingAndThen(
-//                                Collectors.maxBy(Comparator.comparing(PaymentRecord::getPaymentDate, Comparator.nullsLast(Comparator.naturalOrder()))),
-//                                opt -> opt.orElse(null)
-//                        )
-//                ));
-//
-//        logger.debug("Built user-to-latest-payment map of size: {}", userToLatestPaymentMap.size());
-//
-//        return allSeats.stream()
-//                .flatMap(seat -> {
-//                    List<User> users = seatToUserMap.getOrDefault(String.valueOf(seat.getSeatNo()), Collections.emptyList());
-//
-//                    if (!users.isEmpty()) {
-//                        return users.stream().map(user -> {
-//                            PaymentRecord payment = userToLatestPaymentMap.get(user.getId());
-//
-//                            return new SeatFullInfoDTO(
-//                                    seat.getSeatNo(),
-//                                    user.getId(),
-//                                    user.getName(),
-//                                    user.getMobile(),
-//                                    user.getShift(),
-//                                    payment != null ? payment.getPaid() : null,
-//                                    payment != null ? payment.getDueDate() : null
-//                                    // payment != null ? payment.getComments() : null
-//                            );
-//                        });
-//                    } else {
-//                        return Stream.of(new SeatFullInfoDTO(
-//                                seat.getSeatNo(),
-//                                null, null, null, null, null, null
-//                        ));
-//                    }
-//                })
-//                .collect(Collectors.toList());
-//    }
 public List<SeatFullInfoDTO> getAllSeatsWithFullInfo() {
     logger.info("Fetching full seat info (active users with multiple shifts)");
 
@@ -161,7 +111,8 @@ public List<SeatFullInfoDTO> getAllSeatsWithFullInfo() {
                         user.getMobile(),
                         user.getShift(),
                         payment != null ? payment.getPaid() : null,
-                        payment != null ? payment.getDueDate() : null
+                        payment != null ? payment.getDueDate() : null,
+                        user. getExtraHour()
                 );
             })
             .collect(Collectors.toList());

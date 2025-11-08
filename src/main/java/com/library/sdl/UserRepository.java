@@ -10,7 +10,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailAndPassword(String email, String password);
 
 
-    @Query("SELECT s.seat FROM User s WHERE s.isRegistered = 'Y' " +
+    @Query("SELECT s.seat, s.name FROM User s WHERE s.isRegistered = 'Y' " +
             "AND (s.shift LIKE CONCAT(:shift, ',%') " +
             "OR s.shift LIKE CONCAT('%,', :shift, ',%') " +
             "OR s.shift LIKE CONCAT('%,', :shift) " +

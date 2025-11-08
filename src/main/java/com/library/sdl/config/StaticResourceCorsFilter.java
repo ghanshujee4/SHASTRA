@@ -18,7 +18,9 @@ public class StaticResourceCorsFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) response;
 
         String origin = req.getHeader("Origin");
-        if (origin != null && (origin.equals("https://manage.shastradigitallibrary.com"))) {
+        if (origin != null && (origin.equals("https://manage.shastradigitallibrary.com") ||
+                origin.equals("http://localhost:3000")))
+        {
             res.setHeader("Access-Control-Allow-Origin", origin);
             res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
             res.setHeader("Access-Control-Allow-Headers", "*");

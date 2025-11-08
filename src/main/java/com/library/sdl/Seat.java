@@ -13,7 +13,6 @@ public class Seat {
     private int seatNo;
 
 
-
     public Seat() {
 
     }
@@ -25,6 +24,16 @@ public class Seat {
     public void setId(Long id) {
         this.id = id;
     }
+
+    public Long getName() {
+        return name;
+    }
+
+    public void setName(Long name) {
+        this.name = name;
+    }
+
+    public Long name ;
 
     public int getSeatNo() {
         return seatNo;

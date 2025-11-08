@@ -1,0 +1,47 @@
+name: Deploy SDL App
+
+on:
+  push:
+    branches: ["main"]   # Trigger on push to main branch
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Java
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Build JAR with Maven
+      - name: Build Spring Boot App
+        run: mvn clean package -DskipTests
+
+      # 4. Copy JAR to VPS
+      - name: Upload JAR to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "target/*SNAPSHOT.jar"
+          target: "/home/user/sdlapp/sdlapp.jar"
+
+      # 5. Restart systemd service
+      - name: Restart sdlapp service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            systemctl daemon-reload
+            systemctl restart sdlapp
+            systemctl status sdlapp --no-pager -l

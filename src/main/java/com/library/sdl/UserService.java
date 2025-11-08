@@ -1,22 +1,34 @@
 package com.library.sdl;
 
+import com.library.sdl.notification.Notification;
+import com.library.sdl.notification.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.library.sdl.email.EmailService;
 
-import java.time.LocalDate;
+// import javax.management.Notification;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
-
+    @Autowired
+    private EmailService emailSenderService;
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
@@ -41,15 +53,50 @@ public class UserService {
     @Transactional
     public User createUser(User user) {
         logger.info("Creating new user with email: {}", user.getEmail());
-        user.setIsRegistered("Y");
+        user.setIsRegistered("N");
+        Notification n = new Notification();
+        n.setMessage("New student registered: " + user.getName());
+        n.setCreatedAt(LocalDateTime.now());
+        n.setRead(false);
+        notificationRepository.save(n);
+        messagingTemplate.convertAndSend("/topic/notifications", n);
         return userRepository.save(user);
     }
 
+
     @Transactional
     public User toggleActivateUser(User user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User or user ID cannot be null");
+        }
         String currentStatus = user.getIsRegistered();
         String newStatus = "Y".equals(currentStatus) ? "N" : "Y";
         user.setIsRegistered(newStatus);
+        String subject;
+        String body;
+
+        if ("N".equals(newStatus)) {
+            subject = "Account Deactivated ❌ by SDL";
+            body = "Dear " + user.getName() + ",\n\n"
+                    + "Your account has been *deactivated* temporarily.\n\n"
+                    + "Please clear your due. Ignore if already paid\n"
+                    + "Visit: https://shastradigitallibrary.com/\n\n"
+                    + "Your Enrollment ID: " + user.getId() + "\n\n"
+                    + "Thank you,\nTeam SDL";
+        } else {
+
+            subject = "Welcome back to SDL 🎉";
+            body = "Dear " + user.getName() + ",\n\n"
+                    + "Your account has been *activated* successfully!\n\n"
+                    + "Please login and pay your fee at: https://manage.shastradigitallibrary.com/login/\n\n"
+                    + "Your Enrollment ID: " + user.getId() + "\n\n"
+                    + "Your Password = " + user.getPassword()  + "\n\n"
+                    + "Thank you,\nTeam SDL";
+        }
+
+        // Send email
+        emailSenderService.sendEmailToUser(user.getEmail(), subject, body);
+
         logger.info("Toggled user registration status for user ID {} to {}", user.getId(), newStatus);
         return userRepository.save(user);
     }
@@ -62,6 +109,8 @@ public class UserService {
         existingUser.setName(updatedUser.getName());
         existingUser.setEmail(updatedUser.getEmail());
         existingUser.setPassword(updatedUser.getPassword());
+        existingUser.setMobile(updatedUser.getMobile());
+        existingUser.setExtraHour(updatedUser.getExtraHour());
         existingUser.setAdmissionDate(updatedUser.getAdmissionDate());
         return userRepository.save(existingUser);
     }
@@ -71,13 +120,26 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
-    public User loginUser(String email, String password) {
-        logger.info("Attempting login for user: {}", email);
-        return userRepository.findByEmailAndPassword(email, password)
-                .orElseThrow(() -> {
-                    logger.error("Login failed for user: {}", email);
-                    return new RuntimeException("User not found: " + email);
-                });
+    public User loginUser(String identifier, String password) {
+        logger.info("Attempting login for identifier: {}", identifier);
+
+        Optional<User> userOptional;
+
+        // Check if identifier looks like a numeric ID or an email
+        if (identifier.matches("\\d+")) {
+            // If it's all digits, treat it as user ID
+            Long userId = Long.parseLong(identifier);
+            userOptional = userRepository.findById(userId)
+                    .filter(user -> user.getPassword().equals(password));
+        } else {
+            // Otherwise, treat it as email
+            userOptional = userRepository.findByEmailAndPassword(identifier, password);
+        }
+
+        return userOptional.orElseThrow(() -> {
+            logger.error("Login failed for identifier: {}", identifier);
+            return new RuntimeException("Invalid credentials for: " + identifier);
+        });
     }
 
     public boolean isEmailUnique(String email) {

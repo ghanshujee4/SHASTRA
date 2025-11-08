@@ -20,6 +20,16 @@ public class SeatFullInfoDTO {
     private Double amount;
     private String comments;
 
+    public String getExtraHour() {
+        return extraHour;
+    }
+
+    public void setExtraHour(String extraHour) {
+        this.extraHour = extraHour;
+    }
+
+    private String extraHour;
+
     public int getSeatNo() {
         return seatNo;
     }
@@ -118,7 +128,7 @@ public class SeatFullInfoDTO {
 
     // Constructor
     public SeatFullInfoDTO(int seatNo, Long userId, String userName, Long mobile, String shift,
-                           Boolean isPaid, LocalDate dueDate) {
+                           Boolean isPaid, LocalDate dueDate, String extraHour) {
         this.seatNo = seatNo;
         this.userId = userId;
         this.userName = userName;
@@ -127,6 +137,7 @@ public class SeatFullInfoDTO {
         this.shift = shift;
         this.isPaid = isPaid;
         this.dueDate = dueDate;
+        this.extraHour = extraHour;
 
     }
 
