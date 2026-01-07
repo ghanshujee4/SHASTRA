@@ -4,4 +4,5 @@ public enum RequestType {
     DEACTIVATION,
     SEAT_SHIFT,
     REACTIVATION,
+    ACTIVATION,
 }

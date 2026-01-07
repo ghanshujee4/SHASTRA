@@ -87,4 +87,5 @@ public class PaymentRecord {
     public void setPaid(Boolean paid) {
         isPaid = paid;
     }
+
 }

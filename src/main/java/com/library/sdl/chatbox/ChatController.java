@@ -77,7 +77,7 @@ public class ChatController {
                 Map<String, Object> contentResponse = (Map<String, Object>) candidate.get("content");
                 List<Map<String, String>> partsResponse = (List<Map<String, String>>) contentResponse.get("parts");
                 if (partsResponse != null && !partsResponse.isEmpty()) {
-                    return partsResponse.get(0).get("text");
+                    return partsResponse.getFirst().get("text");
                 }
             }
             return "No response from API";

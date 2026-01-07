@@ -1,14 +1,17 @@
 package com.library.sdl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.library.sdl.config.JwtService;
 import com.library.sdl.email.EmailService;
 import com.library.sdl.payment.PaymentRecordService;
+import com.library.sdl.notification.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
@@ -16,6 +19,7 @@ import java.util.List;
 
 @RestController
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping({ "/api/users"})
 public class UserController {
     @Autowired
@@ -26,10 +30,14 @@ public class UserController {
     private FileStorageService fileStorageService;
     @Autowired
     private PaymentRecordService paymentRecordService;
-
+@Autowired
+private NotificationService notificationService;
     public UserController(UserService userService) {
         this.userService = userService;
     }
+
+    @Autowired
+    private JwtService jwtService;
 
     @GetMapping
     public List<User> getAllUsers() {
@@ -63,7 +71,9 @@ public class UserController {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
             User savedUser = userService.createUser(user);
-            paymentRecordService.createMonthlyPayment(savedUser.getId(), "Initial registration payment");
+            paymentRecordService.createMonthlyPayment(savedUser.getId(), "Monthly Payment");
+            paymentRecordService.createRegistrationPayment(savedUser.getId(), "Initial registration payment");
+
             // ✅ Send welcome email
             emailSenderService.sendEmailToUser(
                     savedUser.getEmail(),
@@ -90,7 +100,8 @@ public class UserController {
     @DeleteMapping("/{id}")
     public String deleteUser(@PathVariable Long id) {
         logger.info("Deleting user with ID: {}", id);
-        paymentRecordService.deleteUser(id);
+//        paymentRecordService.deleteUser(id);
+//        notificationService.deleteUser(id);
         userService.deleteUser(id);
         return "User deleted successfully.";
     }
@@ -99,11 +110,13 @@ public class UserController {
     public LoginResponse loginUser(@RequestBody User user) {
         logger.info("Login attempt for user: {}", user.getEmail());
         User userDto = userService.loginUser(user.getEmail(), user.getPassword());
+        String jwtToken = jwtService.generateToken(userDto, userDto.getRole());
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setMessage("Login Successful");
-        loginResponse.setToken(userDto.getId().toString());
+        loginResponse.setToken(jwtToken);
+        // loginResponse.setToken(userDto.getId().toString());
         loginResponse.setUserId(userDto.getId().toString());
-        loginResponse.setRole("user");
+        loginResponse.setRole("ROLE_USER");
 
         logger.info("User logged in successfully: {}", user.getEmail());
         return loginResponse;
@@ -133,23 +146,27 @@ public class UserController {
         );
     }
 
-    @RequestMapping(value = "/admin/login", method = RequestMethod.POST)
+    @PostMapping("/admin/login")
     public LoginResponse adminLogin(@RequestBody User user) {
-        try {
-            logger.info("Admin login attempt: {}", user.getEmail());
-            User admin = userService.loginAdmin(user.getEmail(), user.getPassword());
-            LoginResponse loginResponse = new LoginResponse();
-            loginResponse.setMessage("Admin Login Successful");
-            loginResponse.setToken("ADMIN-TOKEN-" + admin.getId());
-            loginResponse.setUserId(admin.getId().toString());
-            loginResponse.setRole("admin");  // Set the role for future use
-            logger.info("Admin logged in successfully: {}", user.getEmail());
-            return loginResponse;
-        } catch (RuntimeException e) {
-            logger.error("Admin login failed for: {}", user.getEmail(), e);
-            return null;
-        }
+
+        logger.info("Admin login attempt: {}", user.getEmail());
+
+        User admin = userService.loginAdmin(user.getEmail(), user.getPassword());
+
+        // ✅ ROLE MUST COME FROM AUTHENTICATED USER
+        String token = jwtService.generateToken(admin, admin.getRole());
+
+        LoginResponse response = new LoginResponse();
+        response.setMessage("Admin Login Successful");
+        response.setToken(token);
+        response.setUserId(admin.getId().toString());
+        response.setRole("ADMIN");
+
+        logger.info("Admin logged in successfully: {}", user.getEmail());
+        return response;
     }
+
+
 
     @GetMapping("/admin-only")
     public ResponseEntity<String> adminOnly(@RequestHeader("Authorization") String token) {

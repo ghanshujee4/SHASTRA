@@ -1,15 +1,19 @@
 package com.library.sdl.request;
 
+import com.library.sdl.idCard.IdCardService;
+import com.library.sdl.payment.PaymentRecord;
+import com.library.sdl.payment.PaymentRecordRepository;
 import com.library.sdl.User;
 import com.library.sdl.UserRepository;
 import com.library.sdl.notification.Notification;
 import com.library.sdl.notification.NotificationRepository;
 import com.library.sdl.email.EmailService;
-import com.library.sdl.UserService;
+// import com.library.sdl.idCard.IdCardSerice;
+import com.library.sdl.payment.PaymentRecordService;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +29,9 @@ public class UserRequestService {
     private UserRequestRepository requestRepo;
 
     @Autowired
+    private PaymentRecordService paymentRecordService;
+
+    @Autowired
     private UserRepository userRepo;
 
     @Autowired
@@ -32,6 +39,12 @@ public class UserRequestService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private PaymentRecordRepository paymentRecordRepository;
+
+    @Autowired
+    private IdCardService idCardService;
 
     @Autowired
     private NotificationService notificationService;
@@ -47,18 +60,27 @@ public class UserRequestService {
         // Create and save the request
         UserRequest req = new UserRequest();
         req.setUser(user);
+        req.setCreatedAt(LocalDateTime.now());
         req.setType(type);
         req.setDetails(details);
         req.setStatus("PENDING");
         req.setCreatedAt(LocalDateTime.now());
         requestRepo.save(req);
-
         // 🔔 Create admin notification
         Notification n = new Notification();
         n.setMessage("📩 New " + type + " request from " + user.getName());
         n.setCreatedAt(LocalDateTime.now());
         n.setRead(false);
         notificationRepo.save(n);
+        if (type == RequestType.REACTIVATION || type == RequestType.SEAT_SHIFT) {
+
+            paymentRecordService.reactivationShiftSeatChangePayment(
+                    userId,
+                    type == RequestType.REACTIVATION
+                            ? "Reactivation Request Fee"
+                            : "Seat / Shift Change Request Fee"
+            );
+        }
 
         // ✉️ Send email notifications
         try {
@@ -134,12 +156,20 @@ public class UserRequestService {
 
     // ✅ Approve a request
     @Transactional
-    public UserRequest approveRequest(Long requestId) {
+    public UserRequest approveRequest(Long requestId) throws MessagingException {
+
         UserRequest req = requestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("❌ Request not found with ID: " + requestId));
 
         req.setStatus("APPROVED");
         User user = req.getUser();
+
+        // 🔔 Create admin notification
+        Notification n = new Notification();
+        n.setMessage("📩 Approved " + req.getType() + " request from " + user.getName());
+        n.setCreatedAt(LocalDateTime.now());
+        n.setRead(false);
+        notificationRepo.save(n);
 
         // 💤 Handle Deactivation Request
         if (req.getType() == RequestType.DEACTIVATION) {
@@ -165,6 +195,44 @@ public class UserRequestService {
                             """,
                             user.getName()
                     )
+            );
+        }
+        // ✅ Handle Activation Request for newly registered users
+        if (req.getType() == RequestType.ACTIVATION) {
+
+            user.setIsRegistered("Y"); // Activate user
+            userRepo.save(user);
+            PaymentRecord payment =
+                    paymentRecordService.getLatestPaidPayment(user.getId());
+
+            byte[] pdf = idCardService.generateIdCard(
+                    user,
+                    payment.getDueDate()
+            );
+
+
+//            emailService.sendIdCard(
+//                    user.getEmail(),
+//                    "Your SDL ID Card",
+//                    "Your ID Card is attached",
+//                    pdf
+//            );
+            notificationService.createAndSend(
+                    "🎉 Account Activated for " + user.getName() + " (ID: " + user.getId() + ")"
+            );
+
+            emailService.sendEmailToUser(
+                    user.getEmail(),
+                    "Your SDL Account is Activated 🎉",
+                    String.format("""
+                    Dear %s,
+                    
+                    Your SDL account activation request has been approved.
+                    You can now log in and use the digital library services.
+
+                    Thank you,
+                    Team SDL
+                    """, user.getName())
             );
         }
 
@@ -194,6 +262,7 @@ public class UserRequestService {
 
         // 🔄 Handle Seat / Shift Change Request
         if (req.getType() == RequestType.SEAT_SHIFT) {
+
             try {
                 // ✅ Example expected format in DB: "Shift change request to [1,2] -> seat:3"
                 String details = req.getDetails();

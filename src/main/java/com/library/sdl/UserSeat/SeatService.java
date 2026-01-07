@@ -1,7 +1,8 @@
 
-package com.library.sdl;
+package com.library.sdl.UserSeat;
 
-import com.library.sdl.UserSeat.SeatFullInfoDTO;
+import com.library.sdl.User;
+import com.library.sdl.UserRepository;
 import com.library.sdl.payment.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -101,6 +102,11 @@ public List<SeatFullInfoDTO> getAllSeatsWithFullInfo() {
     // Step 4: Build DTOs per user-shift-seat combo
     return allUsers.stream()
             .map(user -> {
+                String extraHour =
+                        (user.getExtraHour() == null || user.getExtraHour().isBlank())
+                                ? "0"
+                                : user.getExtraHour();
+
                 Seat seat = seatMap.get(user.getSeat());
                 PaymentRecord payment = userToLatestPaymentMap.get(user.getId());
 
@@ -112,7 +118,8 @@ public List<SeatFullInfoDTO> getAllSeatsWithFullInfo() {
                         user.getShift(),
                         payment != null ? payment.getPaid() : null,
                         payment != null ? payment.getDueDate() : null,
-                        user. getExtraHour()
+                        // user.getExtraHour()
+                        extraHour
                 );
             })
             .collect(Collectors.toList());

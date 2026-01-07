@@ -34,6 +34,7 @@ public class FileStorageService {
 
         // Extract extension
         String originalFileName = file.getOriginalFilename();
+        assert originalFileName != null;
         String extension = getFileExtension(originalFileName).toLowerCase();
         logger.info("File extension detected: {}", extension);
 

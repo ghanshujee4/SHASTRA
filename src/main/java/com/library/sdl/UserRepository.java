@@ -2,6 +2,7 @@ package com.library.sdl;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,5 +27,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByMobile(long mobile);
 
     Optional<User> findByEmail(String email);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM UserRequest ur WHERE ur.user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
 }
 

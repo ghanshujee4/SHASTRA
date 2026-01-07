@@ -1,13 +1,14 @@
-package com.library.sdl;
+package com.library.sdl.UserSeat;
 
-import com.library.sdl.UserSeat.SeatFullInfoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 //@CrossOrigin(origins = "http://localhost:3000")
 @CrossOrigin(origins = "*")
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/seats")
 public class SeatController {
 

@@ -2,6 +2,11 @@ package com.library.sdl;
 
 import com.library.sdl.notification.Notification;
 import com.library.sdl.notification.NotificationRepository;
+import com.library.sdl.payment.PaymentRecordRepository;
+import com.library.sdl.request.RequestType;
+import com.library.sdl.request.UserRequest;
+import com.library.sdl.request.UserRequestRepository;
+import com.library.sdl.request.UserRequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class UserService {
+    public class UserService {
     @Autowired
     private EmailService emailSenderService;
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -26,6 +31,15 @@ public class UserService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private PaymentRecordRepository paymentRecordRepository;
+
+    @Autowired
+    private UserRequestRepository userRequestRepository;
+
+    @Autowired
+    private UserRequestService userRequestService;
 
     @Autowired
     private NotificationRepository notificationRepository;
@@ -53,14 +67,36 @@ public class UserService {
     @Transactional
     public User createUser(User user) {
         logger.info("Creating new user with email: {}", user.getEmail());
+
+        // Newly registered user should remain inactive
         user.setIsRegistered("N");
+
+        // ✅ Set default role
+        user.setRole("USER");
+
+        // ✅ Enable user
+        user.setEnabled(true);
+
+        // Save user FIRST so it gets a valid ID
+        User savedUser = userRepository.save(user);
+
+        // Notify admin that a new student registered
         Notification n = new Notification();
-        n.setMessage("New student registered: " + user.getName());
+        n.setMessage("New student registered: " + savedUser.getName());
         n.setCreatedAt(LocalDateTime.now());
         n.setRead(false);
         notificationRepository.save(n);
         messagingTemplate.convertAndSend("/topic/notifications", n);
-        return userRepository.save(user);
+
+        // Create activation request for newly registered user
+        userRequestService.createRequest(
+                savedUser.getId(),
+                RequestType.ACTIVATION,
+                "Account activation required"
+        );
+
+        // Keep this as your final return
+        return savedUser;
     }
 
 
@@ -114,9 +150,12 @@ public class UserService {
         existingUser.setAdmissionDate(updatedUser.getAdmissionDate());
         return userRepository.save(existingUser);
     }
-
+    @Transactional
     public void deleteUser(Long id) {
         logger.warn("Deleting user with ID: {}", id);
+        paymentRecordRepository.deleteByUserId(id);
+        notificationRepository.deleteByUserId(id);
+        userRequestRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
 
@@ -163,19 +202,41 @@ public class UserService {
                 });
     }
 
+//    public User loginAdmin(String email, String password) {
+//        logger.info("Admin login attempt for: {}", email);
+//        if ("admin@library.com".equals(email) && "Admin@123".equals(password)) {
+//            User admin = new User();
+//            admin.setId(0L);
+//            admin.setName("Admin");
+//            admin.setEmail(email);
+//            admin.setIsRegistered("Y");
+//            logger.info("Admin login successful");
+//            return admin;
+//        } else {
+//            logger.error("Invalid admin login attempt for email: {}", email);
+//            throw new RuntimeException("Invalid admin credentials");
+//        }
+//    }
+
     public User loginAdmin(String email, String password) {
+
         logger.info("Admin login attempt for: {}", email);
+
         if ("admin@library.com".equals(email) && "Admin@123".equals(password)) {
+
             User admin = new User();
-            admin.setId(0L);
+            admin.setId(1L); // ❗ must be valid
             admin.setName("Admin");
             admin.setEmail(email);
-            admin.setIsRegistered("Y");
+            admin.setRole("ADMIN");      // ✅ REQUIRED
+            admin.setIsRegistered("Y");  // optional
+            admin.setEnabled(true);      // ✅ REQUIRED
+            admin.setPassword(password);
             logger.info("Admin login successful");
             return admin;
-        } else {
-            logger.error("Invalid admin login attempt for email: {}", email);
-            throw new RuntimeException("Invalid admin credentials");
         }
+
+        throw new RuntimeException("Invalid admin credentials");
     }
+
 }

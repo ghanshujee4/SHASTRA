@@ -9,13 +9,21 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, Long> {
+
     List<PaymentRecord> findByUserId(Long userId);
-    @Transactional
+
+    // @Transactional
     @Modifying
     @Query("DELETE FROM PaymentRecord p WHERE p.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);
+
+    // Optional<PaymentRecord> findTopByUserIdAndPaidTrueOrderByPaymentDateDesc(Long userId);
+    Optional<PaymentRecord>
+    findTopByUserIdAndIsPaidFalseOrderByDueDateDesc(Long userId);
+
 }
 

@@ -26,7 +26,7 @@ public class PaymentRecordService {
 
         switch (shift) {
             case "SHIFT1":
-            case "1": return 450.0;
+            case "1": return 400.0;
             case "SHIFT2":
             case "2": return 500.0;
             case "SHIFT3":
@@ -75,7 +75,7 @@ public class PaymentRecordService {
         payment.setAmount(amount);
         payment.setPaymentDate(LocalDate.now());
         payment.setComments(comments);
-
+        // payment.setDueDate(payment.getDueDate());
         paymentRecordRepository.save(payment);
 
         PaymentRecord newPayment = new PaymentRecord();
@@ -98,10 +98,10 @@ public class PaymentRecordService {
         paymentRecordRepository.save(newPayment);
     }
 
-    @Transactional
-    public void deleteUser(Long id) {
-        paymentRecordRepository.deleteByUserId(id);
-    }
+//    @Transactional
+//    public void deleteUser(Long id) {
+//        paymentRecordRepository.deleteByUserId(id);
+//    }
 
     public void updatePayment(Long paymentId, PaymentRecord updatedPayment) {
         PaymentRecord existingPayment = paymentRecordRepository.findById(paymentId)
@@ -165,4 +165,57 @@ public class PaymentRecordService {
                 })
                 .collect(Collectors.toList());
     }
-}
+
+    public void createRegistrationPayment(Long userId, String comments) {
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        PaymentRecord payment = new PaymentRecord();
+        payment.setUser(user);
+        payment.setAmount(100.0); // ✅ Fixed registration fee
+        payment.setPaid(false);
+        payment.setComments(
+                (comments != null && !comments.isBlank())
+                        ? comments
+                        : "Initial Registration Fee"
+        );
+
+        LocalDate today = LocalDate.now();
+        payment.setDueDate(today);
+        payment.setMonthPaid(today);
+        payment.setPaymentDate(null);
+
+        paymentRecordRepository.save(payment);
+    }
+    public void reactivationShiftSeatChangePayment(Long userId, String comments) {
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        PaymentRecord payment = new PaymentRecord();
+        payment.setUser(user);
+        payment.setAmount(50.0); // ✅ Fixed registration fee
+        payment.setPaid(false);
+        payment.setComments(
+                (comments != null && !comments.isBlank())
+                        ? comments
+                        : "Reactivation and Seat/Shift  Fee"
+        );
+
+        LocalDate today = LocalDate.now();
+        payment.setDueDate(today);
+        payment.setMonthPaid(today);
+        payment.setPaymentDate(null);
+
+        paymentRecordRepository.save(payment);
+    }
+
+        // ✅ REQUIRED for ID Card
+        public PaymentRecord getLatestPaidPayment(Long userId) {
+            return paymentRecordRepository.findTopByUserIdAndIsPaidFalseOrderByDueDateDesc(userId)
+                    .orElseThrow(() ->
+                            new RuntimeException("No valid payment found for ID card"));
+        }
+    }
+

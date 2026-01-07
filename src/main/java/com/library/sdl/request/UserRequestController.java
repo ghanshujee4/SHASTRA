@@ -1,5 +1,6 @@
 package com.library.sdl.request;
 
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,7 @@ public class UserRequestController {
     }
 
     @PutMapping("/approve/{id}")
-    public ResponseEntity<UserRequest> approveRequest(@PathVariable Long id) {
+    public ResponseEntity<UserRequest> approveRequest(@PathVariable Long id) throws MessagingException {
         return ResponseEntity.ok(userRequestService.approveRequest(id));
     }
 
@@ -41,4 +42,11 @@ public class UserRequestController {
     public ResponseEntity<UserRequest> rejectRequest(@PathVariable Long id) {
         return ResponseEntity.ok(userRequestService.rejectRequest(id));
     }
+
+    @PostMapping("/activate/{userId}")
+    public ResponseEntity<UserRequest> requestActivation(@PathVariable Long userId) {
+        UserRequest req = userRequestService.createRequest(userId, RequestType.ACTIVATION, "New user activation request");
+        return ResponseEntity.ok(req);
+    }
+
 }

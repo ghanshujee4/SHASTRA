@@ -3,7 +3,7 @@ package com.library.sdl.notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime;;
 
 @Service
 public class NotificationService {
@@ -29,4 +29,9 @@ public class NotificationService {
 
         System.out.println("📢 Notification Sent: " + message);
     }
+
+//    public void deleteUser(Long id) {
+//        // logger.warn("Deleting user with ID: {}", id);
+//        notificationRepo.deleteById(id);
+//    }
 }
