@@ -5,30 +5,47 @@ import com.library.sdl.User;
 import com.library.sdl.UserRepository;
 import com.library.sdl.payment.PaymentRecord;
 import com.library.sdl.payment.PaymentRecordService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/idcard")
-@RequiredArgsConstructor
 public class IdCardController {
 
     private final PaymentRecordService paymentRecordService;
     private final IdCardService idCardService;
     private final UserRepository userRepo;
+    public IdCardController(
+            PaymentRecordService paymentRecordService,
+            IdCardService idCardService,
+            UserRepository userRepo) {
 
+        this.paymentRecordService = paymentRecordService;
+        this.idCardService = idCardService;
+        this.userRepo = userRepo;
+    }
     @GetMapping("/download")
     public ResponseEntity<byte[]> downloadIdCard(
-            @AuthenticationPrincipal CustomUserDetails principal) {
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @RequestParam(required = false) Long userId
+    ) {
 
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        User user = userRepo.findById(principal.getId())
+        // If an admin requests and provides a userId, allow fetching that user's id card.
+        Long effectiveUserId = principal.getId();
+        if (userId != null) {
+            if (isAdmin(principal)) {
+                effectiveUserId = userId;
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+
+        User user = userRepo.findById(effectiveUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // ✅ BUSINESS RULE
@@ -56,9 +73,20 @@ public class IdCardController {
 
     @GetMapping("/card-data")
     public IdCardDTO getIdCardData(
-            @AuthenticationPrincipal CustomUserDetails principal) {
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @RequestParam(required = false) Long userId
+    ) {
 
-        User user = userRepo.findById(principal.getId())
+        Long effectiveUserId = principal.getId();
+        if (userId != null) {
+            if (isAdmin(principal)) {
+                effectiveUserId = userId;
+            } else {
+                throw new RuntimeException("Forbidden");
+            }
+        }
+
+        User user = userRepo.findById(effectiveUserId)
                 .orElseThrow();
 
         PaymentRecord payment =
@@ -71,6 +99,12 @@ public class IdCardController {
                 user.getShift(),
                 payment.getDueDate()   // ✅ single truth
         );
+    }
+
+    // Simple helper to check for ADMIN role
+    private boolean isAdmin(CustomUserDetails principal) {
+        return principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
 

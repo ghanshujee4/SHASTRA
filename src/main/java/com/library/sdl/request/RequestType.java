@@ -5,4 +5,5 @@ public enum RequestType {
     SEAT_SHIFT,
     REACTIVATION,
     ACTIVATION,
+    PAYMENT_APPROVAL   // ✅ NEW
 }

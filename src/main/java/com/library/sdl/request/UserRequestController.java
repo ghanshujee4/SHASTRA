@@ -49,4 +49,10 @@ public class UserRequestController {
         return ResponseEntity.ok(req);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteRequest(@PathVariable Long id) {
+        userRequestService.deleteRequest(id);
+        return ResponseEntity.ok("Request deleted successfully");
+    }
+
 }

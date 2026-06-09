@@ -1,14 +1,11 @@
 package com.library.sdl.email;
 
 import com.library.sdl.UserRepository;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,6 +20,7 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String senderEmailUsername;
 
+    @Async
     public void sendEmail(String to, String subject, String body) {
         if (to == null || to.isEmpty()) {
             System.out.println("❌ Email not provided");
@@ -31,8 +29,10 @@ public class EmailService {
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(senderEmailUsername);
+
+            message.setFrom("info@manage.shastradigitallibrary.com");
             message.setTo(to);
+            message.setBcc("info@manage.shastradigitallibrary.com");
             message.setSubject(subject);
             message.setText(body);
 
@@ -47,7 +47,12 @@ public class EmailService {
 
     public void sendEmailToUser(String email, String subject, String body) {
         userRepository.findByEmail(email).ifPresentOrElse(user -> {
-            sendEmail(user.getEmail(), subject, body);
+            try {
+                sendEmail(user.getEmail(), subject, body);
+            } catch (Exception e) {
+                // Async exceptions won't propagate to caller, but log just in case
+                System.err.println("⚠️ Async email sending failed for " + user.getEmail() + ": " + e.getMessage());
+            }
         }, () -> {
             System.out.println("❌ No user found with email " + email);
         });

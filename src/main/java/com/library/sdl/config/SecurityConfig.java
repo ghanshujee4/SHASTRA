@@ -3,7 +3,6 @@ package com.library.sdl.config;
 import com.library.sdl.idCard.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,28 +13,38 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.core.userdetails.UserDetailsService;
-
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CustomUserDetailsService userDetailsService) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.userDetailsService = userDetailsService;
     }
+//    @Bean
+//    public AuthenticationProvider authenticationProvider() {
+//        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+//        provider.setUserDetailsService(userDetailsService);
+//        provider.setPasswordEncoder(passwordEncoder());
+//        return provider;
+//    }
+@Bean
+public AuthenticationProvider authenticationProvider() {
+    DaoAuthenticationProvider provider =
+            new DaoAuthenticationProvider(userDetailsService);
+
+    provider.setPasswordEncoder(passwordEncoder());
+
+    return provider;
+}
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
@@ -44,7 +53,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -55,8 +64,8 @@ public class SecurityConfig {
                                 "/api/users/login",
                                 "/api/users/register",
                                 "/api/users/admin/login",
-                                // "/api/payments",
-                                "/api/payments/**",
+//                                "/api/payments",
+                                // "/api/payments/**",
                                 "/uploads/**",
                                 "/static/uploads/**",
                                 "/ws/**",          // ✅ allow websocket noise
@@ -65,10 +74,22 @@ public class SecurityConfig {
                                 "/api/sheat",
                                 "/api/auth/**",
                                 "/api/seats/**",
-                                "/api/users/**",
+                                // "/api/users/**",
                                 "/api/users/check-email",
-                                "/api/email/sendBulk"
+                                "/api/users/check-mobile",
+                                "/api/email/sendBulk",
+                                "/actuator/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/docs/**",
+                                "/api/chat/health",
+                                "/chat.html"
                         ).permitAll()
+                        // 🤖 AI chat (Llama via Ollama)
+                        .requestMatchers("/api/chat/admin").hasRole("ADMIN")
+                        .requestMatchers("/api/chat/student").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/chat").hasAnyRole("USER", "ADMIN")
                         // 👑 ADMIN → ACCESS EVERYTHING
                         .requestMatchers(
                                 "/api/admin/**", "/topic/notifications/**").hasRole("ADMIN")
@@ -78,7 +99,9 @@ public class SecurityConfig {
                                 "/api/idcard/**",
                                 "/api/payments/**",
                                 "/api/requests/**",
-                                "/api/idcard/card-data"
+                                "/api/users/**",
+                                "/api/idcard/card-data",
+                                "/api/payments/overdue"
 
                         ).hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated() // 🔐 includes /api/idcard/**
@@ -102,7 +125,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000", "https://manage.shastradigitallibrary.com"));
+        config.setAllowedOrigins(List.of("http://localhost:3000", "https://manage.shastradigitallibrary.com","http://145.223.21.103"));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

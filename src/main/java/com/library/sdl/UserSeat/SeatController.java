@@ -5,7 +5,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-//@CrossOrigin(origins = "http://localhost:3000")
 @CrossOrigin(origins = "*")
 @RestController
 @PreAuthorize("hasRole('ADMIN')")
@@ -13,8 +12,6 @@ import java.util.List;
 public class SeatController {
 
     private final SeatService seatService;
-    // List<SeatFullInfoDTO> getAllSeatsWithFullInfo()
-
 
     @Autowired
     public SeatController(SeatService seatService) {

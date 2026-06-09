@@ -202,22 +202,6 @@ import java.util.Optional;
                 });
     }
 
-//    public User loginAdmin(String email, String password) {
-//        logger.info("Admin login attempt for: {}", email);
-//        if ("admin@library.com".equals(email) && "Admin@123".equals(password)) {
-//            User admin = new User();
-//            admin.setId(0L);
-//            admin.setName("Admin");
-//            admin.setEmail(email);
-//            admin.setIsRegistered("Y");
-//            logger.info("Admin login successful");
-//            return admin;
-//        } else {
-//            logger.error("Invalid admin login attempt for email: {}", email);
-//            throw new RuntimeException("Invalid admin credentials");
-//        }
-//    }
-
     public User loginAdmin(String email, String password) {
 
         logger.info("Admin login attempt for: {}", email);

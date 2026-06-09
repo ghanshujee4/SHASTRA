@@ -15,6 +15,8 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -52,6 +54,32 @@ public class UserRequestService {
     @Value("${spring.mail.username}")
     private String senderEmailUsername;
 
+    private static final Pattern PAYMENT_PATTERN =
+            Pattern.compile("paymentId=(\\d+),type=(\\w+)");
+
+    private PaymentRecord extractPaymentFromDetails(String details) {
+        Matcher matcher = PAYMENT_PATTERN.matcher(details);
+
+        if (!matcher.find()) {
+            throw new RuntimeException("Invalid payment details format");
+        }
+
+        Long paymentId = Long.parseLong(matcher.group(1));
+
+        return paymentRecordRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found"));
+    }
+
+    private String extractPaymentType(String details) {
+        Matcher matcher = PAYMENT_PATTERN.matcher(details);
+
+        if (!matcher.find()) {
+            return "UNKNOWN";
+        }
+
+        return matcher.group(2);
+    }
+
     // ✅ Create a new user request (shift/seat change or deactivation)
     public UserRequest createRequest(Long userId, RequestType type, String details) {
         User user = userRepo.findById(userId)
@@ -82,6 +110,20 @@ public class UserRequestService {
             );
         }
 
+        if (type == RequestType.PAYMENT_APPROVAL) {
+
+            PaymentRecord payment = extractPaymentFromDetails(details);
+            String paymentType = extractPaymentType(details);
+
+            payment.setComments("User claimed paid via " + paymentType);
+            paymentRecordRepository.save(payment);
+
+            notificationService.createAndSend(
+                    "💰 Payment request raised by " + user.getName()
+                            + " | ₹" + payment.getAmount()
+                            + " | Mode: " + paymentType
+            );
+        }
         // ✉️ Send email notifications
         try {
             String adminEmail = senderEmailUsername;
@@ -164,19 +206,13 @@ public class UserRequestService {
         req.setStatus("APPROVED");
         User user = req.getUser();
 
-        // 🔔 Create admin notification
-        Notification n = new Notification();
-        n.setMessage("📩 Approved " + req.getType() + " request from " + user.getName());
-        n.setCreatedAt(LocalDateTime.now());
-        n.setRead(false);
-        notificationRepo.save(n);
-
         // 💤 Handle Deactivation Request
         if (req.getType() == RequestType.DEACTIVATION) {
             user.setIsRegistered("N");
             userRepo.save(user);
-            notificationService.createAndSend(
-                    "✅ Seat/Shift change approved for " + user.getName() + " (Seat " + user.getSeat() + ", Shift " + user.getShift() + ")"
+            notificationService.createAndSendToUser(
+                    user.getId(),
+                    "✅ Your deactivation request has been approved"
             );
             emailService.sendEmailToUser(
                     user.getEmail(),
@@ -210,15 +246,9 @@ public class UserRequestService {
                     payment.getDueDate()
             );
 
-
-//            emailService.sendIdCard(
-//                    user.getEmail(),
-//                    "Your SDL ID Card",
-//                    "Your ID Card is attached",
-//                    pdf
-//            );
-            notificationService.createAndSend(
-                    "🎉 Account Activated for " + user.getName() + " (ID: " + user.getId() + ")"
+            notificationService.createAndSendToUser(
+                    user.getId(),
+                    "🎉 Your account has been activated! Welcome to SDL"
             );
 
             emailService.sendEmailToUser(
@@ -240,8 +270,9 @@ public class UserRequestService {
         if (req.getType() == RequestType.REACTIVATION) {
             user.setIsRegistered("Y");
             userRepo.save(user);
-            notificationService.createAndSend(
-                    "✅ Seat/Shift change approved for " + user.getName() + " (Seat " + user.getSeat() + ", Shift " + user.getShift() + ")"
+            notificationService.createAndSendToUser(
+                    user.getId(),
+                    "✅ Your account has been reactivated! Welcome back"
             );
             emailService.sendEmailToUser(
                     user.getEmail(),
@@ -251,11 +282,9 @@ public class UserRequestService {
             
                     Your reactivation request has been approved.
                     Your account is now active again. Welcome back!
-                    Pay the Fee and send screenshot to SDL WhatsApp to get it approved.
                     
                     Thank you,
                     Team SDL
-                    7979070385
                     """.formatted(user.getName())
             );
         }
@@ -268,7 +297,7 @@ public class UserRequestService {
                 String details = req.getDetails();
 
                 // Pattern: extract items inside brackets [1,2] and seat after "seat:"
-                Pattern pattern = Pattern.compile("\\[(.*?)\\]\\s*->\\s*seat:(\\d+)");
+                Pattern pattern = Pattern.compile("\\[(.*?)]\\s*->\\s*seat:(\\d+)");
                 Matcher matcher = pattern.matcher(details);
 
                 if (matcher.find()) {
@@ -284,8 +313,9 @@ public class UserRequestService {
                     user.setShift(shiftPart);
                     user.setSeat(seatPart);
                     userRepo.save(user);
-                    notificationService.createAndSend(
-                            "✅ Seat/Shift change approved for " + user.getName() + " (Seat " + user.getSeat() + ", Shift " + user.getShift() + ")"
+                    notificationService.createAndSendToUser(
+                            user.getId(),
+                            "✅ Your seat/shift change has been approved (Seat " + user.getSeat() + ", Shift " + user.getShift() + ")"
                     );
                     // ✅ Send confirmation email
                     emailService.sendEmailToUser(
@@ -320,8 +350,46 @@ public class UserRequestService {
             }
         }
 
+        if (req.getType() == RequestType.PAYMENT_APPROVAL) {
+
+            PaymentRecord payment = extractPaymentFromDetails(req.getDetails());
+            String paymentType = extractPaymentType(req.getDetails());
+
+            paymentRecordService.markAsPaid(
+                    payment.getId(),
+                    payment.getAmount(),
+                    "Approved (" + paymentType + ")"
+            );
+            // 🔔 notification - user-specific
+            notificationService.createAndSendToUser(
+                    payment.getUser().getId(),
+                    "✅ Your payment of ₹" + payment.getAmount() + " has been approved"
+            );
+
+            // ✉️ email
+            emailService.sendEmailToUser(
+                    payment.getUser().getEmail(),
+                    "Payment Approved ✅",
+                    String.format("""
+            Dear %s,
+
+            Your payment of ₹%.2f has been successfully verified and approved.
+
+            Mode: %s
+
+            Thank you,
+            Team SDL
+            """,
+                            payment.getUser().getName(),
+                            payment.getAmount(),
+                            paymentType
+                    )
+            );
+        }
+
         return requestRepo.save(req);
     }
+
 
     // ❌ Reject a request
     public UserRequest rejectRequest(Long requestId) {
@@ -330,6 +398,12 @@ public class UserRequestService {
 
         req.setStatus("REJECTED");
         requestRepo.save(req);
+
+        // 🔔 Push WebSocket notification to user + admin
+        notificationService.createAndSendToUser(
+                req.getUser().getId(),
+                "❌ Your " + req.getType() + " request has been rejected"
+        );
 
         emailService.sendEmailToUser(
                 req.getUser().getEmail(),
@@ -351,6 +425,70 @@ public class UserRequestService {
                 )
         );
 
+        if (req.getType() == RequestType.PAYMENT_APPROVAL) {
+
+            PaymentRecord payment = extractPaymentFromDetails(req.getDetails());
+
+            payment.setComments("Payment request rejected");
+            paymentRecordRepository.save(payment);
+
+            notificationService.createAndSendToUser(
+                    payment.getUser().getId(),
+                    "❌ Your payment request has been rejected"
+            );
+        }
         return req;
     }
+
+    // ❌ Delete a request
+    @Transactional
+    public void deleteRequest(Long requestId) {
+        UserRequest req = requestRepo.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("❌ Request not found with ID: " + requestId));
+
+        User user = req.getUser();
+        RequestType type = req.getType();
+        String details = req.getDetails();
+
+        System.out.println("🗑️ Deleting request ID " + requestId + " for user " + user.getName());
+
+        // ✉️ Send notification email to user
+        try {
+            emailService.sendEmailToUser(
+                    user.getEmail(),
+                    "Request Deleted",
+                    String.format(
+                            """
+                            Dear %s,
+                            
+                            Your %s request (ID: %d) has been deleted.
+                            
+                            Details: %s
+                            
+                            If you believe this was done in error, please contact support.
+                            
+                            Thank you,
+                            Team SDL
+                            """,
+                            user.getName(),
+                            type,
+                            requestId,
+                            details
+                    )
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Email notification failed: " + e.getMessage());
+        }
+        
+        // 🔔 Push WebSocket notification to user + admin with real-time updates
+        notificationService.createAndSendToUser(
+                user.getId(),
+                "🗑️ Your " + type + " request (ID: " + requestId + ") has been deleted"
+        );
+
+        // Delete the request
+        requestRepo.deleteById(requestId);
+        System.out.println("✅ Request ID " + requestId + " deleted successfully");
+    }
 }
+

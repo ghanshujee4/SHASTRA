@@ -10,9 +10,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@PreAuthorize("hasRole('ADMIN')")
+// @PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/payments")
 @CrossOrigin(origins = "*")
 public class PaymentRecordController {
@@ -120,4 +121,26 @@ public class PaymentRecordController {
         List<PaymentRecord> overduePayments = paymentRecordService.getAllOverduePayments();
         return ResponseEntity.ok().body(overduePayments);
     }
+
+    // payment request/ approval
+//    @PostMapping("/{id}/raise-request")
+//    public ResponseEntity<?> raiseRequest(
+//            @PathVariable Long id,
+//            @RequestBody Map<String, String> body
+//    ) {
+//        paymentRecordService.raisePaymentRequest(id, body.get("type"));
+//        return ResponseEntity.ok("Request submitted");
+//    }
+//    @PutMapping("/{id}/approve-request")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public ResponseEntity<?> approve(@PathVariable Long id) {
+//        paymentRecordService.approvePaymentRequest(id);
+//        return ResponseEntity.ok("Approved");
+//    }
+//    @PutMapping("/{id}/reject-request")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    public ResponseEntity<?> reject(@PathVariable Long id) {
+//        paymentRecordService.rejectPaymentRequest(id);
+//        return ResponseEntity.ok("Rejected");
+//    }
 }

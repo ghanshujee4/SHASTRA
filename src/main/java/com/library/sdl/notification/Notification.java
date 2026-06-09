@@ -62,9 +62,19 @@ public class Notification {
 
     public void getMessage(String s) {
     }
+    
     @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;   // ✅ correct
+    
+    // User getters and setters
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
+    }
 
 }

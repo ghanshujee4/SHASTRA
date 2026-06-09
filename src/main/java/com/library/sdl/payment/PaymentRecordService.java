@@ -3,7 +3,8 @@ package com.library.sdl.payment;
 import com.library.sdl.User;
 import com.library.sdl.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.rest.webmvc.ResourceNotFoundException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,18 +52,16 @@ public class PaymentRecordService {
 
     public void createMonthlyPayment(Long userId, String comments) {
         User user = userRepo.findById(userId).orElseThrow();
-        if (user != null) {
-            PaymentRecord payment = new PaymentRecord();
-            payment.setUser(user);
-            double amount = calculateShiftAmount(user.getShift());
-            payment.setAmount(amount);
-            payment.setComments(comments);
-            LocalDate admissionDate = user.getAdmissionDate();
-            payment.setDueDate(admissionDate != null ? admissionDate : LocalDate.now());
-            payment.setPaid(false);
-            payment.setMonthPaid(user.getAdmissionDate());
-            paymentRecordRepository.save(payment);
-        }
+        PaymentRecord payment = new PaymentRecord();
+        payment.setUser(user);
+        double amount = calculateShiftAmount(user.getShift());
+        payment.setAmount(amount);
+        payment.setComments(comments);
+        LocalDate admissionDate = user.getAdmissionDate();
+        payment.setDueDate(admissionDate != null ? admissionDate : LocalDate.now());
+        payment.setPaid(false);
+        payment.setMonthPaid(user.getAdmissionDate());
+        paymentRecordRepository.save(payment);
     }
 
     public List<PaymentRecord> getUserPayments(Long userId) {
@@ -105,7 +104,7 @@ public class PaymentRecordService {
 
     public void updatePayment(Long paymentId, PaymentRecord updatedPayment) {
         PaymentRecord existingPayment = paymentRecordRepository.findById(paymentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
         existingPayment.setPaymentDate(updatedPayment.getPaymentDate());
         existingPayment.setAmount(updatedPayment.getAmount());
         existingPayment.setPaid(updatedPayment.getPaid());
@@ -117,14 +116,14 @@ public class PaymentRecordService {
 
     public void deletePayment(Long paymentId) {
         PaymentRecord existingPayment = paymentRecordRepository.findById(paymentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
         paymentRecordRepository.delete(existingPayment);
     }
 
     // ✅ NEW METHOD: Add new manual payment record
     public PaymentRecord addPaymentRecord(Long userId, PaymentRecord record) {
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         PaymentRecord newPayment = new PaymentRecord();
         newPayment.setUser(user);
@@ -169,7 +168,7 @@ public class PaymentRecordService {
     public void createRegistrationPayment(Long userId, String comments) {
 
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         PaymentRecord payment = new PaymentRecord();
         payment.setUser(user);
@@ -191,7 +190,7 @@ public class PaymentRecordService {
     public void reactivationShiftSeatChangePayment(Long userId, String comments) {
 
         User user = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         PaymentRecord payment = new PaymentRecord();
         payment.setUser(user);
@@ -217,5 +216,38 @@ public class PaymentRecordService {
                     .orElseThrow(() ->
                             new RuntimeException("No valid payment found for ID card"));
         }
+
+    // 🔹 Raise payment request
+//    public void raisePaymentRequest(Long id, String type) {
+//        PaymentRecord p = paymentRecordRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Payment not found"));
+//
+//        p.setRequestRaised(true);
+//        p.setRequestType(type); // CASH / ONLINE
+//        p.setRequestStatus("PENDING");
+//
+//        paymentRecordRepository.save(p);
+//    }
+//
+//    // 🔹 Approve request
+//    public void approvePaymentRequest(Long id) {
+//        PaymentRecord p = paymentRecordRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Payment not found"));
+//
+//        p.setRequestStatus("APPROVED");
+//        p.setPaid(true);
+//        p.setPaymentDate(LocalDate.now());
+//
+//        paymentRecordRepository.save(p);
+//    }
+//    // 🔹 Reject request
+//    public void rejectPaymentRequest(Long id) {
+//        PaymentRecord p = paymentRecordRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Payment not found"));
+//
+//        p.setRequestStatus("REJECTED");
+//
+//        paymentRecordRepository.save(p);
+//    }
     }
 

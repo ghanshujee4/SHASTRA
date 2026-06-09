@@ -88,4 +88,36 @@ public class PaymentRecord {
         isPaid = paid;
     }
 
+
+    @Column(name = "request_raised")
+    private Boolean requestRaised;
+
+    @Column(name = "request_type")
+    private String requestType;   // CASH / ONLINE
+
+    @Column(name = "request_status")
+    private String requestStatus; // PENDING / APPROVED / REJECTED
+
+    public Boolean getRequestRaised() { return requestRaised;}
+
+    public void setRequestRaised(Boolean requestRaised) {
+        this.requestRaised = requestRaised;
+    }
+
+    public String getRequestType() {
+        return requestType;
+    }
+
+    public void setRequestType(String requestType) {
+        this.requestType = requestType;
+    }
+
+    public String getRequestStatus() {
+        return requestStatus;
+    }
+
+    public void setRequestStatus(String requestStatus) {
+        this.requestStatus = requestStatus;
+    }
+
 }
